@@ -7,16 +7,49 @@
 
 import UIKit
 
+public final class URLSessionHTTPClient: HTTPClient {
+  private let session: URLSession
+
+  public init(session: URLSession) {
+    self.session = session
+  }
+
+  private struct UnexpectedValuesRepresentation: Error {}
+
+
+  public func get(from url: URL, completion: @escaping (HTTPClient.Result) -> Void) {
+    let task = session.dataTask(with: url) { data, response, error in
+      completion(Result {
+        if let error = error {
+          throw error
+        } else if let data = data, let response = response as? HTTPURLResponse {
+          return (data, response)
+        } else {
+          throw UnexpectedValuesRepresentation()
+        }
+      })
+    }
+    task.resume()
+  }
+}
+
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
   var window: UIWindow?
 
 
   func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-    // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
-    // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
-    // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-    guard let _ = (scene as? UIWindowScene) else { return }
+    guard let scene = (scene as? UIWindowScene) else { return }
+
+    let session = URLSession(configuration: .ephemeral)
+
+    let viewController = UINavigationController(rootViewController: CatViewController(client: URLSessionHTTPClient(session: session )))
+
+    self.window = UIWindow(windowScene: scene)
+
+    self.window?.makeKeyAndVisible()
+    self.window?.rootViewController = viewController
+
   }
 
   func sceneDidDisconnect(_ scene: UIScene) {
