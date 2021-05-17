@@ -37,11 +37,12 @@ final class CatViewController: UIViewController {
   private func loadFacts() {
     client.get(from: URL(string: "https://cat-fact.herokuapp.com/facts")!) { [weak self] result in
       switch result {
-      case let .success(data, response):
+      case let .success((data, _)):
         guard let catFacts = try? JSONDecoder().decode(CatFacts.self, from: data) else { return }
         self?.setFacts(facts: catFacts)
+        
       case .failure(_):
-        print("")
+        break
       }
     }
   }
@@ -97,70 +98,3 @@ extension CatViewController: UITableViewDataSource {
   }
 }
 
-final class CatCell: UITableViewCell {
-  func setFact(_ fact: String) {
-    self.textLabel?.numberOfLines = 0
-    self.textLabel?.text = fact
-  }
-}
-
-final class EnterAnimator {
-  typealias Animation = (UITableViewCell, IndexPath, UITableView) -> Void
-
-  var hasAnimatedFirstReload: Bool = false
-  private let animation: Animation
-
-  init(animation: @escaping Animation) {
-    self.animation = animation
-  }
-
-  func animate(cell: UITableViewCell, at indexPath: IndexPath, in tableView: UITableView) {
-    guard !hasAnimatedFirstReload else { return }
-
-    animation(cell, indexPath, tableView)
-  }
-
-  static func makeSlideUp(duration: TimeInterval = 1.25, delay: Double = 0.05) -> Animation {
-    return { cell, indexPath, tableView in
-      cell.transform = CGAffineTransform(translationX: 0, y: tableView.bounds.height)
-      cell.alpha = 0.25
-      UIView.animate(withDuration: duration,
-                     delay: (delay * Double(indexPath.row)),
-                     usingSpringWithDamping: 0.75,
-                     initialSpringVelocity: 0.1,
-                     options: [.curveEaseInOut],
-                     animations: {
-                      cell.transform = CGAffineTransform(translationX: 0, y: 0)
-                      cell.alpha = 1
-                     })
-    }
-  }
-}
-
-// MARK: - CatFactElement
-struct CatFactElement: Codable {
-  let status: Status
-  let type: String
-  let deleted: Bool
-  let id, user, text: String
-  let v: Int
-  let source, updatedAt, createdAt: String
-  let used: Bool
-
-  enum CodingKeys: String, CodingKey {
-    case status, type, deleted
-    case id = "_id"
-    case user, text
-    case v = "__v"
-    case source, updatedAt, createdAt, used
-  }
-}
-
-// MARK: - Status
-struct Status: Codable {
-  let verified: Bool
-  let sentCount: Int
-  let feedback: String?
-}
-
-typealias CatFacts = [CatFactElement]
